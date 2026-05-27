@@ -26,6 +26,12 @@ DATABASE_URL=sqlite+aiosqlite:///./data/app.db
 
 Если `DATABASE_URL` не задан или задан пустым, приложение использует этот SQLite URL. Папка `data` создаётся автоматически. При первом запуске с SQLite приложение создаёт таблицы через SQLAlchemy metadata.
 
+На bothost.ru укажите абсолютный путь к постоянной папке данных:
+
+```env
+DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
+```
+
 ## Архитектура
 
 Handlers в `app/bot/handlers` не вызывают WaveSpeed напрямую. Они получают `GenerationService`, а сервис уже использует `WavespeedClient`; записи пользователей и генераций сохраняются через репозитории SQLAlchemy.
@@ -66,7 +72,7 @@ Copy-Item .env.example .env
 Пример для MVP:
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
 REDIS_URL=
 ```
 
@@ -135,7 +141,7 @@ python -m app.main
 | --- | --- |
 | `BOT_TOKEN` | токен Telegram-бота |
 | `WAVESPEED_API_KEY` | API-ключ WaveSpeed |
-| `DATABASE_URL` | опциональный async URL базы данных; по умолчанию `sqlite+aiosqlite:///./data/app.db` |
+| `DATABASE_URL` | опциональный async URL базы данных; локально по умолчанию `sqlite+aiosqlite:///./data/app.db`, на bothost.ru используйте `sqlite+aiosqlite:////app/data/app.db` |
 | `REDIS_URL` | опциональный URL Redis; пустое значение включает in-memory режим |
 | `TELEGRAM_PROXY` | опциональный proxy URL для Telegram API, например `socks5://HOST:PORT` |
 | `ADMIN_IDS` | Telegram ID администраторов через запятую |

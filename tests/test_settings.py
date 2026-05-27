@@ -41,6 +41,21 @@ def test_database_settings_reads_database_url_without_bot_secrets(
     assert settings.database_url == "sqlite+aiosqlite:///./custom/app.db"
 
 
+def test_database_settings_falls_back_to_sqlite_for_postgresql_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    monkeypatch.delenv("WAVESPEED_API_KEY", raising=False)
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://USER:PASSWORD@db.example.com:5432/DB_NAME?ssl=require",
+    )
+
+    settings = DatabaseSettings(_env_file=None)
+
+    assert settings.database_url == DEFAULT_DATABASE_URL
+
+
 @pytest.mark.parametrize("database_url", [None, ""])
 def test_database_settings_uses_sqlite_default_without_database_url(
     database_url: str | None,

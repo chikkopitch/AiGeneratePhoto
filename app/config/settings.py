@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-from app.config.database_url import DEFAULT_DATABASE_URL, validate_external_database_url
+from app.config.database_url import DEFAULT_DATABASE_URL, resolve_mvp_database_url
 
 
 class DatabaseSettings(BaseSettings):
@@ -19,7 +19,7 @@ class DatabaseSettings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_database_url(cls, value: object) -> str:
-        return validate_external_database_url(None if value is None else str(value))
+        return resolve_mvp_database_url(None if value is None else str(value))
 
 
 class Settings(DatabaseSettings):

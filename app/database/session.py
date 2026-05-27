@@ -7,7 +7,12 @@ from sqlalchemy import text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config.database_url import normalize_database_url
+from app.config.database_url import (
+    DEFAULT_DATABASE_URL,
+    POSTGRESQL_DATABASE_URL_IGNORED_MESSAGE,
+    normalize_database_url,
+    resolve_mvp_database_url,
+)
 from app.database.base import Base
 from app.database.models import Generation, User  # noqa: F401
 
@@ -31,7 +36,13 @@ def create_database_engine(settings: DatabaseSettings | str) -> AsyncEngine:
     global _engine
 
     raw_database_url = settings if isinstance(settings, str) else settings.database_url
-    database_url = normalize_database_url(raw_database_url)
+    normalized_database_url = normalize_database_url(raw_database_url)
+    database_url = resolve_mvp_database_url(normalized_database_url)
+    if database_url == DEFAULT_DATABASE_URL and normalized_database_url != DEFAULT_DATABASE_URL:
+        logger.warning(
+            POSTGRESQL_DATABASE_URL_IGNORED_MESSAGE,
+            extra={"status": "postgresql_database_url_ignored"},
+        )
     _ensure_sqlite_database_directory(database_url)
     _engine = create_async_engine(
         database_url,

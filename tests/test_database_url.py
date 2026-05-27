@@ -4,6 +4,7 @@ from app.config.database_url import (
     DEFAULT_DATABASE_URL,
     DATABASE_URL_EXTERNAL_HOST_MESSAGE,
     normalize_database_url,
+    resolve_mvp_database_url,
     validate_external_database_url,
 )
 
@@ -51,6 +52,12 @@ def test_normalize_database_url_keeps_sqlite_url() -> None:
     url = "sqlite+aiosqlite:///./data/app.db"
 
     assert normalize_database_url(url) == url
+
+
+def test_resolve_mvp_database_url_uses_sqlite_for_postgresql_url() -> None:
+    url = "postgresql+asyncpg://user:pass@db.example.com:5432/db?ssl=require"
+
+    assert resolve_mvp_database_url(url) == DEFAULT_DATABASE_URL
 
 
 def test_normalize_database_url_removes_asyncpg_unsupported_channel_binding() -> None:
