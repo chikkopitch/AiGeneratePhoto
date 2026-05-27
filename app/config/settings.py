@@ -4,11 +4,11 @@ from typing import Annotated
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-from app.config.database_url import DATABASE_URL_NOT_SET_MESSAGE, normalize_database_url
+from app.config.database_url import DEFAULT_DATABASE_URL, validate_external_database_url
 
 
 class DatabaseSettings(BaseSettings):
-    database_url: str = Field(default="", validate_default=True)
+    database_url: str = Field(default=DEFAULT_DATABASE_URL, validate_default=True)
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -19,9 +19,7 @@ class DatabaseSettings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_database_url(cls, value: object) -> str:
-        if value is None:
-            raise ValueError(DATABASE_URL_NOT_SET_MESSAGE)
-        return normalize_database_url(str(value))
+        return validate_external_database_url(None if value is None else str(value))
 
 
 class Settings(DatabaseSettings):

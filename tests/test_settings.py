@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config import DATABASE_URL_NOT_SET_MESSAGE, DatabaseSettings, Settings
+from app.config import DEFAULT_DATABASE_URL, DatabaseSettings, Settings
 
 
 def test_settings_parses_required_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -9,7 +9,7 @@ def test_settings_parses_required_environment(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("WAVESPEED_API_KEY", "wavespeed-key")
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require",
+        "sqlite+aiosqlite:///./data/app.db",
     )
     monkeypatch.setenv("REDIS_URL", "")
     monkeypatch.setenv("ADMIN_IDS", "123456789,987654321")
@@ -19,7 +19,7 @@ def test_settings_parses_required_environment(monkeypatch: pytest.MonkeyPatch) -
 
     assert settings.bot_token.get_secret_value() == "123:telegram"
     assert settings.wavespeed_api_key.get_secret_value() == "wavespeed-key"
-    assert settings.database_url == "postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require"
+    assert settings.database_url == DEFAULT_DATABASE_URL
     assert settings.redis_url is None
     assert settings.admin_ids == [123456789, 987654321]
     assert settings.support_chat_id == -1001234567890
@@ -33,12 +33,29 @@ def test_database_settings_reads_database_url_without_bot_secrets(
     monkeypatch.delenv("WAVESPEED_API_KEY", raising=False)
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require",
+        "sqlite+aiosqlite:///./custom/app.db",
     )
 
     settings = DatabaseSettings(_env_file=None)
 
-    assert settings.database_url == "postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require"
+    assert settings.database_url == "sqlite+aiosqlite:///./custom/app.db"
+
+
+@pytest.mark.parametrize("database_url", [None, ""])
+def test_database_settings_uses_sqlite_default_without_database_url(
+    database_url: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    monkeypatch.delenv("WAVESPEED_API_KEY", raising=False)
+    if database_url is None:
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("DATABASE_URL", database_url)
+
+    settings = DatabaseSettings(_env_file=None)
+
+    assert settings.database_url == DEFAULT_DATABASE_URL
 
 
 def test_settings_parses_optional_redis_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -46,7 +63,7 @@ def test_settings_parses_optional_redis_url(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("WAVESPEED_API_KEY", "wavespeed-key")
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require",
+        "sqlite+aiosqlite:///./data/app.db",
     )
     monkeypatch.setenv("REDIS_URL", "redis://cache.example.com:6379/0")
 
@@ -55,16 +72,15 @@ def test_settings_parses_optional_redis_url(monkeypatch: pytest.MonkeyPatch) -> 
     assert settings.redis_url == "redis://cache.example.com:6379/0"
 
 
-def test_settings_rejects_missing_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_uses_sqlite_default_for_missing_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BOT_TOKEN", "123:telegram")
     monkeypatch.setenv("WAVESPEED_API_KEY", "wavespeed-key")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("REDIS_URL", raising=False)
 
-    with pytest.raises(ValidationError) as exc_info:
-        Settings(_env_file=None)
+    settings = Settings(_env_file=None)
 
-    assert DATABASE_URL_NOT_SET_MESSAGE in str(exc_info.value)
+    assert settings.database_url == DEFAULT_DATABASE_URL
 
 
 def test_settings_rejects_invalid_default_image_size(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -72,7 +88,7 @@ def test_settings_rejects_invalid_default_image_size(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("WAVESPEED_API_KEY", "wavespeed-key")
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require",
+        "sqlite+aiosqlite:///./data/app.db",
     )
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("TELEGRAM_PROXY", raising=False)
@@ -89,7 +105,7 @@ def test_settings_allows_missing_support_chat_id(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("WAVESPEED_API_KEY", "wavespeed-key")
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require",
+        "sqlite+aiosqlite:///./data/app.db",
     )
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_PROXY", "")

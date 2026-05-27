@@ -12,7 +12,12 @@ from redis.asyncio import Redis
 from app.bot.handlers import get_routers
 from app.bot.middlewares import DatabaseSessionMiddleware, IncomingLoggingMiddleware
 from app.config import Settings
-from app.database import check_database_connection, create_database_engine, create_session_factory
+from app.database import (
+    check_database_connection,
+    create_database_engine,
+    create_session_factory,
+    initialize_database,
+)
 from app.services import GenerationService, InMemoryKeyValueStore, RateLimitService, WavespeedClient
 from app.utils import setup_logging
 
@@ -25,6 +30,7 @@ async def main() -> None:
 
     engine = create_database_engine(settings)
     try:
+        await initialize_database(engine)
         await check_database_connection(engine)
     except RuntimeError as exc:
         await engine.dispose()

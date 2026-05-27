@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.sql.type_api import TypeEngine
 
 revision: str = "0001_initial_schema"
 down_revision: str | None = None
@@ -16,11 +17,23 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _integer_type() -> TypeEngine:
+    if op.get_context().dialect.name == "sqlite":
+        return sa.Integer()
+    return sa.BigInteger()
+
+
+def _identity() -> tuple[sa.Identity, ...]:
+    if op.get_context().dialect.name == "sqlite":
+        return ()
+    return (sa.Identity(),)
+
+
 def upgrade() -> None:
     op.create_table(
         "users",
-        sa.Column("id", sa.BigInteger(), sa.Identity(), nullable=False),
-        sa.Column("telegram_id", sa.BigInteger(), nullable=False),
+        sa.Column("id", _integer_type(), *_identity(), nullable=False),
+        sa.Column("telegram_id", _integer_type(), nullable=False),
         sa.Column("username", sa.String(length=255), nullable=True),
         sa.Column("first_name", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -31,8 +44,8 @@ def upgrade() -> None:
 
     op.create_table(
         "generations",
-        sa.Column("id", sa.BigInteger(), sa.Identity(), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("id", _integer_type(), *_identity(), nullable=False),
+        sa.Column("user_id", _integer_type(), nullable=False),
         sa.Column("prompt", sa.Text(), nullable=False),
         sa.Column("image_url", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=32), server_default="pending", nullable=False),

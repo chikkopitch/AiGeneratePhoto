@@ -1,22 +1,34 @@
 # Telegram-бот AI-фотосессий
 
-Production-ready каркас Telegram-бота для генерации AI-фотосессий по текстовому описанию.
+MVP Telegram-бота для генерации AI-фотосессий по текстовому описанию.
 
 ## Стек
 
 - Python 3.11+
 - aiogram 3
-- PostgreSQL через SQLAlchemy 2 async
-- Alembic
+- SQLite через SQLAlchemy 2 async и aiosqlite
+- Alembic оставлен в проекте, но для MVP миграции вручную запускать не нужно
 - Redis для FSM и лимитов, опционально
 - httpx
 - pydantic-settings
 - Docker Compose
 - pytest
 
+## База данных для MVP
+
+Для MVP на bothost.ru проект настроен на SQLite по умолчанию, поэтому PostgreSQL для запуска не требуется.
+
+По умолчанию используется:
+
+```env
+DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+```
+
+Если `DATABASE_URL` не задан или задан пустым, приложение использует этот SQLite URL. Папка `data` создаётся автоматически. При первом запуске с SQLite приложение создаёт таблицы через SQLAlchemy metadata.
+
 ## Архитектура
 
-Handlers в `app/bot/handlers` не вызывают WaveSpeed напрямую. Они получают `GenerationService`, а сервис уже использует `WavespeedClient`; записи пользователей и генераций сохраняются через репозитории PostgreSQL.
+Handlers в `app/bot/handlers` не вызывают WaveSpeed напрямую. Они получают `GenerationService`, а сервис уже использует `WavespeedClient`; записи пользователей и генераций сохраняются через репозитории SQLAlchemy.
 
 Основной поток:
 
@@ -46,15 +58,15 @@ Copy-Item .env.example .env
 
 - `BOT_TOKEN`
 - `WAVESPEED_API_KEY`
-- `DATABASE_URL`
+- `DATABASE_URL`, можно оставить значением из `.env.example`
 - `REDIS_URL`, если нужен внешний Redis
 - `ADMIN_IDS`
 - `SUPPORT_CHAT_ID`, если нужен чат поддержки
 
-`DATABASE_URL` должен указывать на внешний PostgreSQL. `REDIS_URL` можно оставить пустым:
+Пример для MVP:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME?ssl=require
+DATABASE_URL=sqlite+aiosqlite:///./data/app.db
 REDIS_URL=
 ```
 
@@ -66,33 +78,15 @@ REDIS_URL=
 docker compose up --build
 ```
 
-Контейнер `bot` автоматически выполняет миграции перед стартом polling:
-
-```bash
-alembic upgrade head
-```
-
 Для запуска в фоне используйте:
 
 ```bash
 docker compose up -d --build
 ```
 
-### 3. Применить миграции вручную
+SQLite-файл хранится в Docker volume `bot_data`, который подключён к `/app/data`.
 
-Если контейнеры уже запущены:
-
-```bash
-docker compose exec bot alembic upgrade head
-```
-
-Если нужно запустить одноразовый контейнер только для миграций:
-
-```bash
-docker compose run --rm bot alembic upgrade head
-```
-
-### 4. Смотреть логи
+### 3. Смотреть логи
 
 Логи бота:
 
@@ -106,7 +100,7 @@ docker compose logs -f bot
 docker compose logs -f
 ```
 
-### 5. Остановить проект
+### 4. Остановить проект
 
 Остановить контейнеры:
 
@@ -114,7 +108,7 @@ docker compose logs -f
 docker compose down
 ```
 
-Остановить контейнеры и удалить volumes:
+Остановить контейнеры и удалить volume с SQLite-файлом:
 
 ```bash
 docker compose down -v
@@ -126,7 +120,6 @@ docker compose down -v
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-alembic upgrade head
 python -m app.main
 ```
 
@@ -142,9 +135,9 @@ python -m app.main
 | --- | --- |
 | `BOT_TOKEN` | токен Telegram-бота |
 | `WAVESPEED_API_KEY` | API-ключ WaveSpeed |
-| `DATABASE_URL` | обязательный async URL внешнего PostgreSQL |
+| `DATABASE_URL` | опциональный async URL базы данных; по умолчанию `sqlite+aiosqlite:///./data/app.db` |
 | `REDIS_URL` | опциональный URL Redis; пустое значение включает in-memory режим |
-| `TELEGRAM_PROXY` | опциональный proxy URL для Telegram API, например `socks5://213.159.196.77:1080` |
+| `TELEGRAM_PROXY` | опциональный proxy URL для Telegram API, например `socks5://HOST:PORT` |
 | `ADMIN_IDS` | Telegram ID администраторов через запятую |
 | `SUPPORT_CHAT_ID` | ID чата поддержки |
 | `DEFAULT_IMAGE_SIZE` | размер изображения в формате `WIDTH*HEIGHT`, по умолчанию `2048*2048` |
@@ -157,10 +150,11 @@ python -m app.main
 pytest
 ```
 
-## Источники API
+## Источники API и библиотек
 
 - WaveSpeed документация для `bytedance/seedream-v4`: `POST /api/v3/bytedance/seedream-v4`, `GET /api/v3/predictions/{requestId}/result`, Bearer-auth через `WAVESPEED_API_KEY`: https://wavespeed.ai/docs/docs-api/bytedance/bytedance-seedream-v4
 - SQLAlchemy asyncio: https://docs.sqlalchemy.org/20/orm/extensions/asyncio.html
-- Alembic asyncio cookbook: https://alembic.sqlalchemy.org/en/latest/cookbook.html
+- SQLAlchemy SQLite dialect: https://docs.sqlalchemy.org/20/dialects/sqlite.html
+- aiosqlite: https://aiosqlite.omnilib.dev/
 - aiogram RedisStorage: https://docs.aiogram.dev/en/v3.15.0/dispatcher/finite_state_machine/storages.html
 - pydantic-settings `BaseSettings`: https://docs.pydantic.dev/latest/api/pydantic_settings/
