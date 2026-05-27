@@ -21,7 +21,7 @@ def normalize_database_url(url: str | None) -> str:
     if url is None or not str(url).strip():
         return DEFAULT_DATABASE_URL
 
-    normalized_url = str(url).strip()
+    normalized_url = _strip_database_url_assignment(str(url).strip())
     parsed_url = urlsplit(normalized_url)
     if parsed_url.scheme not in {"postgresql", "postgresql+asyncpg"}:
         return normalized_url
@@ -68,3 +68,9 @@ def _normalize_query_param(param: str) -> str | None:
     if key == "sslmode" and separator and value == "require":
         return "ssl=require"
     return param
+
+
+def _strip_database_url_assignment(value: str) -> str:
+    while value.casefold().startswith("database_url="):
+        value = value.partition("=")[2].strip()
+    return value

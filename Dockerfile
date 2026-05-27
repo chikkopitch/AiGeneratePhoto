@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data \
+    && chmod 777 /app/data
 
 CMD ["python", "-m", "app.main"]

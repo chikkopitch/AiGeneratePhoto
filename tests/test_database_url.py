@@ -54,6 +54,18 @@ def test_normalize_database_url_keeps_sqlite_url() -> None:
     assert normalize_database_url(url) == url
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "DATABASE_URL=sqlite+aiosqlite:///./data/app.db",
+        "DATABASE_URL=DATABASE_URL=sqlite+aiosqlite:///./data/app.db",
+        "database_url=sqlite+aiosqlite:///./data/app.db",
+    ],
+)
+def test_normalize_database_url_strips_accidental_env_assignment_prefix(url: str) -> None:
+    assert normalize_database_url(url) == "sqlite+aiosqlite:///./data/app.db"
+
+
 def test_resolve_mvp_database_url_uses_sqlite_for_postgresql_url() -> None:
     url = "postgresql+asyncpg://user:pass@db.example.com:5432/db?ssl=require"
 
