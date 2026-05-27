@@ -77,6 +77,7 @@ async def initialize_database(engine: AsyncEngine | None = None) -> None:
                 "status": "database_initialization_failed",
                 "database_path": database_engine.url.database or "-",
                 "error_type": type(exc).__name__,
+                "error_message": str(exc),
             },
         )
         raise RuntimeError(SQLITE_INITIALIZATION_ERROR_MESSAGE) from exc
@@ -98,6 +99,7 @@ async def check_database_connection(engine: AsyncEngine | None = None) -> None:
                 "status": "database_unavailable",
                 "database_host": host,
                 "error_type": type(exc).__name__,
+                "error_message": str(exc),
             },
         )
         raise RuntimeError(_build_database_connection_error_message(exc, host)) from exc

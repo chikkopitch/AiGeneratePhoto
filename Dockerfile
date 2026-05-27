@@ -10,13 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-RUN groupadd --system app \
-    && useradd --system --gid app --create-home app
-
-COPY --chown=app:app . .
-RUN mkdir -p /app/data \
-    && chown -R app:app /app
-
-USER app
+COPY . .
+RUN mkdir -p /app/data
 
 CMD ["python", "-m", "app.main"]
