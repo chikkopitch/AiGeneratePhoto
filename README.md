@@ -6,17 +6,17 @@ MVP Telegram-бота для генерации AI-фотосессий по т�
 
 - Python 3.11+
 - aiogram 3
-- SQLite через SQLAlchemy 2 async и aiosqlite
-- Alembic оставлен в проекте, но для MVP миграции вручную запускать не нужно
+- SQLite или PostgreSQL через SQLAlchemy 2 async
+- Alembic оставлен в проекте; при запуске приложения схема создаётся через SQLAlchemy metadata
 - Redis для FSM и лимитов, опционально
 - httpx
 - pydantic-settings
 - Docker Compose
 - pytest
 
-## База данных для MVP
+## База данных
 
-Для MVP на bothost.ru проект настроен на SQLite по умолчанию, поэтому PostgreSQL для запуска не требуется.
+Проект поддерживает SQLite по умолчанию и внешний PostgreSQL через `DATABASE_URL`.
 
 По умолчанию используется:
 
@@ -24,13 +24,15 @@ MVP Telegram-бота для генерации AI-фотосессий по т�
 DATABASE_URL=sqlite+aiosqlite:///./data/app.db
 ```
 
-Если `DATABASE_URL` не задан или задан пустым, приложение использует этот SQLite URL. Папка `data` создаётся автоматически. При первом запуске с SQLite приложение создаёт таблицы через SQLAlchemy metadata.
+Если `DATABASE_URL` не задан или задан пустым, приложение использует этот SQLite URL. Папка `data` создаётся автоматически. При первом запуске приложение создаёт таблицы через SQLAlchemy metadata.
 
-На bothost.ru укажите абсолютный путь к постоянной папке данных:
+Для PostgreSQL укажите URL формата:
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME
 ```
+
+URL со схемой `postgresql://` автоматически нормализуется к async-драйверу `postgresql+asyncpg://`.
 
 ## Архитектура
 
@@ -69,7 +71,7 @@ Copy-Item .env.example .env
 - `ADMIN_IDS`
 - `SUPPORT_CHAT_ID`, если нужен чат поддержки
 
-Пример для MVP:
+Пример для SQLite:
 
 ```env
 DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
@@ -90,7 +92,7 @@ docker compose up --build
 docker compose up -d --build
 ```
 
-SQLite-файл хранится в Docker volume `bot_data`, который подключён к `/app/data`.
+SQLite-файл хранится в Docker volume `bot_data`, который подключён к `/app/data`. При использовании PostgreSQL данные хранятся во внешней базе из `DATABASE_URL`.
 
 ### 3. Смотреть логи
 
@@ -141,7 +143,7 @@ python -m app.main
 | --- | --- |
 | `BOT_TOKEN` | токен Telegram-бота |
 | `WAVESPEED_API_KEY` | API-ключ WaveSpeed |
-| `DATABASE_URL` | опциональный async URL базы данных; локально по умолчанию `sqlite+aiosqlite:///./data/app.db`, на bothost.ru используйте `sqlite+aiosqlite:////app/data/app.db` |
+| `DATABASE_URL` | опциональный URL базы данных; по умолчанию `sqlite+aiosqlite:///./data/app.db`; для PostgreSQL можно указать `postgresql://USER:PASSWORD@HOST:PORT/DB_NAME` |
 | `REDIS_URL` | опциональный URL Redis; пустое значение включает in-memory режим |
 | `TELEGRAM_PROXY` | опциональный proxy URL для Telegram API, например `socks5://HOST:PORT` |
 | `ADMIN_IDS` | Telegram ID администраторов через запятую |
@@ -161,6 +163,8 @@ pytest
 - WaveSpeed документация для `bytedance/seedream-v4`: `POST /api/v3/bytedance/seedream-v4`, `GET /api/v3/predictions/{requestId}/result`, Bearer-auth через `WAVESPEED_API_KEY`: https://wavespeed.ai/docs/docs-api/bytedance/bytedance-seedream-v4
 - SQLAlchemy asyncio: https://docs.sqlalchemy.org/20/orm/extensions/asyncio.html
 - SQLAlchemy SQLite dialect: https://docs.sqlalchemy.org/20/dialects/sqlite.html
+- SQLAlchemy PostgreSQL dialect: https://docs.sqlalchemy.org/20/dialects/postgresql.html
 - aiosqlite: https://aiosqlite.omnilib.dev/
+- asyncpg: https://magicstack.github.io/asyncpg/current/
 - aiogram RedisStorage: https://docs.aiogram.dev/en/v3.15.0/dispatcher/finite_state_machine/storages.html
 - pydantic-settings `BaseSettings`: https://docs.pydantic.dev/latest/api/pydantic_settings/

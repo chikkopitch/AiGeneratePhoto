@@ -4,7 +4,6 @@ from app.config.database_url import (
     DEFAULT_DATABASE_URL,
     DATABASE_URL_EXTERNAL_HOST_MESSAGE,
     normalize_database_url,
-    resolve_mvp_database_url,
     validate_external_database_url,
 )
 
@@ -66,12 +65,6 @@ def test_normalize_database_url_strips_accidental_env_assignment_prefix(url: str
     assert normalize_database_url(url) == "sqlite+aiosqlite:///./data/app.db"
 
 
-def test_resolve_mvp_database_url_uses_sqlite_for_postgresql_url() -> None:
-    url = "postgresql+asyncpg://user:pass@db.example.com:5432/db?ssl=require"
-
-    assert resolve_mvp_database_url(url) == DEFAULT_DATABASE_URL
-
-
 def test_normalize_database_url_removes_asyncpg_unsupported_channel_binding() -> None:
     url = (
         "postgresql://user:pass@db.example.com/db?"
@@ -89,3 +82,11 @@ def test_validate_external_database_url_rejects_local_or_placeholder_hosts(host:
 
     with pytest.raises(ValueError, match=DATABASE_URL_EXTERNAL_HOST_MESSAGE):
         validate_external_database_url(url)
+
+
+def test_validate_external_database_url_allows_external_postgresql_host() -> None:
+    url = "postgresql://user:pass@node1.pghost.ru:15727/photo_bot"
+
+    assert validate_external_database_url(url) == (
+        "postgresql+asyncpg://user:pass@node1.pghost.ru:15727/photo_bot"
+    )

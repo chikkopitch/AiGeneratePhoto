@@ -7,12 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config.database_url import (
-    DEFAULT_DATABASE_URL,
-    POSTGRESQL_DATABASE_URL_IGNORED_MESSAGE,
-    normalize_database_url,
-    resolve_mvp_database_url,
-)
+from app.config.database_url import validate_external_database_url
 from app.database.base import Base
 from app.database.models import Generation, User  # noqa: F401
 
@@ -21,8 +16,8 @@ logger = logging.getLogger(__name__)
 DATABASE_CONNECTION_ERROR_MESSAGE = (
     "Database is unavailable. Please check DATABASE_URL and database file permissions."
 )
-SQLITE_INITIALIZATION_ERROR_MESSAGE = (
-    "SQLite database cannot be initialized. Please check the data directory permissions."
+DATABASE_INITIALIZATION_ERROR_MESSAGE = (
+    "Database schema cannot be initialized. Please check DATABASE_URL and permissions."
 )
 
 _engine: AsyncEngine | None = None
@@ -36,13 +31,7 @@ def create_database_engine(settings: DatabaseSettings | str) -> AsyncEngine:
     global _engine
 
     raw_database_url = settings if isinstance(settings, str) else settings.database_url
-    normalized_database_url = normalize_database_url(raw_database_url)
-    database_url = resolve_mvp_database_url(normalized_database_url)
-    if database_url == DEFAULT_DATABASE_URL and normalized_database_url != DEFAULT_DATABASE_URL:
-        logger.warning(
-            POSTGRESQL_DATABASE_URL_IGNORED_MESSAGE,
-            extra={"status": "postgresql_database_url_ignored"},
-        )
+    database_url = validate_external_database_url(raw_database_url)
     _ensure_sqlite_database_directory(database_url)
     _engine = create_async_engine(
         database_url,
@@ -64,23 +53,22 @@ async def initialize_database(engine: AsyncEngine | None = None) -> None:
     database_engine = engine or _engine
     if database_engine is None:
         raise RuntimeError("Database engine is not initialized. Call create_database_engine first.")
-    if not _is_sqlite_url(database_engine.url):
-        return
 
     try:
         async with database_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
     except Exception as exc:
         logger.error(
-            "SQLite database initialization failed",
+            "Database schema initialization failed",
             extra={
                 "status": "database_initialization_failed",
-                "database_path": database_engine.url.database or "-",
+                "database_host": database_engine.url.host or "-",
+                "database_name": database_engine.url.database or "-",
                 "error_type": type(exc).__name__,
                 "error_message": str(exc),
             },
         )
-        raise RuntimeError(SQLITE_INITIALIZATION_ERROR_MESSAGE) from exc
+        raise RuntimeError(DATABASE_INITIALIZATION_ERROR_MESSAGE) from exc
 
 
 async def check_database_connection(engine: AsyncEngine | None = None) -> None:

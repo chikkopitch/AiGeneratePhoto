@@ -5,10 +5,6 @@ DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/app.db"
 DATABASE_URL_NOT_SET_MESSAGE = (
     f"DATABASE_URL is not set. Defaulting to SQLite database: {DEFAULT_DATABASE_URL}"
 )
-POSTGRESQL_DATABASE_URL_IGNORED_MESSAGE = (
-    "PostgreSQL DATABASE_URL is configured, but this MVP build uses SQLite. "
-    f"Using {DEFAULT_DATABASE_URL} instead."
-)
 DATABASE_URL_EXTERNAL_HOST_MESSAGE = (
     "DATABASE_URL host must be an external PostgreSQL hostname, not a local Docker host "
     "or placeholder."
@@ -38,14 +34,6 @@ def normalize_database_url(url: str | None) -> str:
         parsed_url = parsed_url._replace(query=query)
 
     return urlunsplit(parsed_url)
-
-
-def resolve_mvp_database_url(url: str | None) -> str:
-    normalized_url = normalize_database_url(url)
-    parsed_url = urlsplit(normalized_url)
-    if parsed_url.scheme in {"postgresql", "postgresql+asyncpg"}:
-        return DEFAULT_DATABASE_URL
-    return normalized_url
 
 
 def validate_external_database_url(url: str | None) -> str:

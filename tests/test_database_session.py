@@ -37,14 +37,15 @@ async def test_create_database_engine_uses_settings_database_url() -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_database_engine_falls_back_to_sqlite_for_postgresql_url() -> None:
+async def test_create_database_engine_uses_postgresql_url() -> None:
     engine = create_database_engine(
         DummySettings("postgresql+asyncpg://user:pass@db.example.com:5432/db?ssl=require")
     )
 
     try:
-        assert engine.url.drivername == "sqlite+aiosqlite"
-        assert engine.url.database == "./data/app.db"
+        assert engine.url.drivername == "postgresql+asyncpg"
+        assert engine.url.host == "db.example.com"
+        assert engine.url.database == "db"
     finally:
         await engine.dispose()
 
