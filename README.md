@@ -1,6 +1,6 @@
 # Telegram-бот AI-фотосессий
 
-MVP Telegram-бота для генерации AI-фотосессий по текстовому описанию.
+MVP Telegram-бота для генерации AI-фотосессий по текстовому описанию и редактирования загруженных фото.
 
 ## Стек
 
@@ -43,8 +43,9 @@ Handlers в `app/bot/handlers` не вызывают WaveSpeed напрямую.
 1. `/start` сохраняет или обновляет Telegram-пользователя и показывает меню.
 2. «Создать фотосессию» переводит пользователя в FSM-состояние ожидания описания.
 3. После текста handler валидирует prompt, создаёт запись генерации и вызывает `GenerationService.generate_image`.
-4. `GenerationService` улучшает prompt, отправляет запрос в WaveSpeed и ждёт завершения через polling.
-5. Handler отправляет пользователю изображение и сохраняет итоговый статус генерации.
+4. Если пользователь отправляет фото, handler скачивает его из Telegram, загружает в WaveSpeed через media upload и ждёт текстовую инструкцию для редактирования.
+5. Для редактирования `GenerationService.generate_edited_image` отправляет prompt и URL загруженного фото в `bytedance/seedream-v4/edit`.
+6. Handler отправляет пользователю изображение и сохраняет итоговый статус генерации.
 
 ## Запуск через Docker
 
@@ -146,6 +147,7 @@ python -m app.main
 | `ADMIN_IDS` | Telegram ID администраторов через запятую |
 | `SUPPORT_CHAT_ID` | ID чата поддержки |
 | `DEFAULT_IMAGE_SIZE` | размер изображения в формате `WIDTH*HEIGHT`, по умолчанию `2048*2048` |
+| `WAVESPEED_EDIT_MODEL_PATH` | модель WaveSpeed для редактирования загруженных фото, по умолчанию `bytedance/seedream-v4/edit` |
 
 ## Тесты
 
@@ -158,6 +160,8 @@ pytest
 ## Источники API и библиотек
 
 - WaveSpeed документация для `bytedance/seedream-v4`: `POST /api/v3/bytedance/seedream-v4`, `GET /api/v3/predictions/{requestId}/result`, Bearer-auth через `WAVESPEED_API_KEY`: https://wavespeed.ai/docs/docs-api/bytedance/bytedance-seedream-v4
+- WaveSpeed документация для редактирования `bytedance/seedream-v4/edit`: обязательные параметры `prompt` и `images`, до 10 reference images: https://wavespeed.ai/docs/docs-api/bytedance/bytedance-seedream-v4-edit
+- WaveSpeed документация для загрузки файлов: `POST /api/v3/media/upload/binary`, изображения до 20 MB, загруженные файлы хранятся 7 дней: https://wavespeed.ai/docs/upload-files
 - SQLAlchemy asyncio: https://docs.sqlalchemy.org/20/orm/extensions/asyncio.html
 - SQLAlchemy SQLite dialect: https://docs.sqlalchemy.org/20/dialects/sqlite.html
 - SQLAlchemy PostgreSQL dialect: https://docs.sqlalchemy.org/20/dialects/postgresql.html

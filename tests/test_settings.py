@@ -22,6 +22,7 @@ def test_settings_parses_required_environment(monkeypatch: pytest.MonkeyPatch) -
     assert settings.admin_ids == [123456789, 987654321]
     assert settings.support_chat_id == -1001234567890
     assert settings.default_image_size == "2048*2048"
+    assert settings.wavespeed_edit_model_path == "bytedance/seedream-v4/edit"
 
 
 def test_database_settings_reads_database_url_without_bot_secrets(

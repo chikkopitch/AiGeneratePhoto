@@ -33,6 +33,7 @@ class Settings(DatabaseSettings):
 
     wavespeed_base_url: str = "https://api.wavespeed.ai"
     wavespeed_model_path: str = "bytedance/seedream-v4"
+    wavespeed_edit_model_path: str = "bytedance/seedream-v4/edit"
     wavespeed_poll_interval_seconds: float = 2.0
     wavespeed_poll_attempts: int = 60
     wavespeed_request_timeout_seconds: float = 60.0

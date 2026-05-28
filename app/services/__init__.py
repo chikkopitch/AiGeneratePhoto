@@ -4,6 +4,7 @@ from app.services.generation import (
     GenerationProviderError,
     GenerationService,
     GenerationTimeoutError,
+    MAX_REFERENCE_IMAGES,
     PromptValidationError,
 )
 from app.services.key_value_store import InMemoryKeyValueStore, KeyValueStore
@@ -25,6 +26,7 @@ __all__ = [
     "GenerationTimeoutError",
     "InMemoryKeyValueStore",
     "KeyValueStore",
+    "MAX_REFERENCE_IMAGES",
     "PromptValidationError",
     "RateLimitService",
     "WaveSpeedClient",

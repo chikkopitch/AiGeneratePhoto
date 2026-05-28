@@ -14,6 +14,8 @@ from app.services.wavespeed import (
 
 BASE_URL = "https://api.wavespeed.ai"
 CREATE_URL = f"{BASE_URL}/api/v3/bytedance/seedream-v4"
+EDIT_URL = f"{BASE_URL}/api/v3/bytedance/seedream-v4/edit"
+UPLOAD_URL = f"{BASE_URL}/api/v3/media/upload/binary"
 RESULT_URL = f"{BASE_URL}/api/v3/predictions/prediction-1/result"
 
 
@@ -66,6 +68,35 @@ async def test_create_prediction_returns_request_id_with_default_payload(
 
 
 @pytest.mark.asyncio
+async def test_create_prediction_can_use_edit_model_and_reference_images(
+    respx_mock: respx.MockRouter,
+) -> None:
+    route = respx_mock.post(EDIT_URL).mock(
+        return_value=httpx.Response(200, json=prediction_payload())
+    )
+
+    async with httpx.AsyncClient() as http_client:
+        client = WaveSpeedClient(api_key="test-key", http_client=http_client)
+        request_id = await client.create_prediction(
+            prompt="replace the background",
+            images=["https://cdn.example/reference.png"],
+            model_path="bytedance/seedream-v4/edit",
+        )
+
+    assert request_id == "prediction-1"
+    assert route.called
+
+    request = route.calls[0].request
+    assert json.loads(request.content) == {
+        "prompt": "replace the background",
+        "size": DEFAULT_IMAGE_SIZE,
+        "images": ["https://cdn.example/reference.png"],
+        "enable_base64_output": False,
+        "enable_sync_mode": False,
+    }
+
+
+@pytest.mark.asyncio
 async def test_generate_image_polls_until_completed_output(
     respx_mock: respx.MockRouter,
 ) -> None:
@@ -96,6 +127,38 @@ async def test_generate_image_polls_until_completed_output(
     assert image_url == "https://cdn.example/final.png"
     assert create_route.call_count == 1
     assert result_route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_upload_binary_file_returns_uploaded_url(
+    respx_mock: respx.MockRouter,
+) -> None:
+    route = respx_mock.post(UPLOAD_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "message": "success",
+                "data": {"url": "https://cdn.example/uploaded.png"},
+            },
+        )
+    )
+
+    async with httpx.AsyncClient() as http_client:
+        client = WaveSpeedClient(api_key="test-key", http_client=http_client)
+        uploaded_url = await client.upload_binary_file(
+            file_bytes=b"image-bytes",
+            filename="portrait.jpg",
+            content_type="image/jpeg",
+        )
+
+    assert uploaded_url == "https://cdn.example/uploaded.png"
+    assert route.called
+
+    request = route.calls[0].request
+    assert request.headers["Authorization"] == "Bearer test-key"
+    assert request.headers["Content-Type"].startswith("multipart/form-data")
+    assert b'image-bytes' in request.content
 
 
 @pytest.mark.asyncio

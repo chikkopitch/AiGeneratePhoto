@@ -91,7 +91,13 @@ class WaveSpeedClient:
             timeout=httpx.Timeout(request_timeout),
         )
 
-    async def create_prediction(self, prompt: str, size: str = DEFAULT_IMAGE_SIZE) -> str:
+    async def create_prediction(
+        self,
+        prompt: str,
+        size: str = DEFAULT_IMAGE_SIZE,
+        images: Iterable[str] | None = None,
+        model_path: str | None = None,
+    ) -> str:
         """Create an image generation prediction and return its request id."""
 
         payload = {
@@ -100,9 +106,12 @@ class WaveSpeedClient:
             "enable_base64_output": False,
             "enable_sync_mode": False,
         }
+        if images is not None:
+            payload["images"] = list(images)
+
         response_payload = await self._request(
             "POST",
-            f"/api/v3/{self._model_path}",
+            f"/api/v3/{self._prediction_model_path(model_path)}",
             json=payload,
         )
         request_id = self._extract_request_id(response_payload)
@@ -124,7 +133,13 @@ class WaveSpeedClient:
         logger.info("WaveSpeed prediction result fetched", extra={"request_id": request_id})
         return response_payload
 
-    async def generate_image(self, prompt: str, size: str = DEFAULT_IMAGE_SIZE) -> str:
+    async def generate_image(
+        self,
+        prompt: str,
+        size: str = DEFAULT_IMAGE_SIZE,
+        images: Iterable[str] | None = None,
+        model_path: str | None = None,
+    ) -> str:
         """Generate an image and return the first output URL.
 
         The method creates a prediction, polls every two seconds by default, and
@@ -132,7 +147,12 @@ class WaveSpeedClient:
         `WaveSpeedTimeoutError` when the 120-second timeout is reached.
         """
 
-        request_id = await self.create_prediction(prompt=prompt, size=size)
+        request_id = await self.create_prediction(
+            prompt=prompt,
+            size=size,
+            images=images,
+            model_path=model_path,
+        )
         deadline = monotonic() + self._max_wait_seconds
 
         while True:
@@ -167,6 +187,21 @@ class WaveSpeedClient:
                 )
 
             await asyncio.sleep(min(self._poll_interval_seconds, remaining_seconds))
+
+    async def upload_binary_file(
+        self,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Upload a binary media file and return the WaveSpeed-hosted URL."""
+
+        response_payload = await self._request(
+            "POST",
+            "/api/v3/media/upload/binary",
+            files={"file": (filename, file_bytes, content_type)},
+        )
+        return self._extract_uploaded_url(response_payload)
 
     async def submit_generation(
         self,
@@ -240,10 +275,14 @@ class WaveSpeedClient:
             await self._http_client.aclose()
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        extra_headers = kwargs.pop("headers", None)
         headers = {
             "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
         }
+        if "files" not in kwargs:
+            headers["Content-Type"] = "application/json"
+        if extra_headers is not None:
+            headers.update(extra_headers)
 
         try:
             response = await self._http_client.request(
@@ -280,6 +319,9 @@ class WaveSpeedClient:
     def _absolute_url(self, path: str) -> str:
         return f"{self._base_url}/{path.lstrip('/')}"
 
+    def _prediction_model_path(self, model_path: str | None) -> str:
+        return (model_path or self._model_path).strip("/")
+
     def _parse_prediction(self, payload: dict[str, Any]) -> WaveSpeedPrediction:
         data = self._extract_data(payload)
         request_id = self._extract_request_id(payload)
@@ -297,6 +339,13 @@ class WaveSpeedClient:
         if not request_id:
             raise WaveSpeedInvalidResponseError("WaveSpeed response does not contain prediction id")
         return str(request_id)
+
+    def _extract_uploaded_url(self, payload: dict[str, Any]) -> str:
+        data = self._extract_data(payload)
+        uploaded_url = data.get("url")
+        if not uploaded_url:
+            raise WaveSpeedInvalidResponseError("WaveSpeed upload response does not contain file URL")
+        return str(uploaded_url)
 
     @staticmethod
     def _extract_data(payload: dict[str, Any]) -> dict[str, Any]:
