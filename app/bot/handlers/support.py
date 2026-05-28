@@ -50,7 +50,7 @@ async def support_message_handler(
     state: FSMContext,
     settings: Settings,
     rate_limit_service: RateLimitService,
-    redis: KeyValueStore,
+    key_value_store: KeyValueStore,
     bot: Bot,
 ) -> None:
     if message.from_user is None or message.text is None:
@@ -79,7 +79,7 @@ async def support_message_handler(
         await message.answer(SUPPORT_UNAVAILABLE_TEXT, reply_markup=main_menu_keyboard())
         return
     await rate_limit_service.mark_support_contact(message.from_user.id)
-    await redis.set(
+    await key_value_store.set(
         SUPPORT_MESSAGE_MAP_KEY.format(message_id=support_message.message_id),
         str(message.from_user.id),
     )
@@ -98,7 +98,7 @@ async def invalid_support_message_handler(message: Message) -> None:
 async def support_reply_handler(
     message: Message,
     settings: Settings,
-    redis: KeyValueStore,
+    key_value_store: KeyValueStore,
     bot: Bot,
 ) -> None:
     if settings.support_chat_id is None or message.chat.id != settings.support_chat_id:
@@ -113,7 +113,7 @@ async def support_reply_handler(
         await message.answer("Используйте формат: /reply <текст>")
         return
 
-    telegram_id = await redis.get(
+    telegram_id = await key_value_store.get(
         SUPPORT_MESSAGE_MAP_KEY.format(message_id=message.reply_to_message.message_id)
     )
     if telegram_id is None:

@@ -9,7 +9,7 @@ from app.services.rate_limit import (
 )
 
 
-class FakeRedis:
+class FakeKeyValueStore:
     def __init__(self) -> None:
         self.values: dict[str, str] = {}
         self.expirations: dict[str, int] = {}
@@ -38,8 +38,8 @@ class FakeRedis:
 
 @pytest.mark.asyncio
 async def test_generation_active_limit_until_finished() -> None:
-    redis = FakeRedis()
-    service = RateLimitService(redis)  # type: ignore[arg-type]
+    key_value_store = FakeKeyValueStore()
+    service = RateLimitService(key_value_store)  # type: ignore[arg-type]
 
     await service.mark_generation_started(1)
 
@@ -52,24 +52,24 @@ async def test_generation_active_limit_until_finished() -> None:
 
 @pytest.mark.asyncio
 async def test_generation_daily_limit() -> None:
-    redis = FakeRedis()
+    key_value_store = FakeKeyValueStore()
     service = RateLimitService(  # type: ignore[arg-type]
-        redis,
+        key_value_store,
         daily_generation_limit=1,
         generation_cooldown_seconds=0,
     )
 
     await service.mark_generation_started(1)
     await service.mark_generation_finished(1)
-    redis.values.pop(service._generation_cooldown_key(1), None)
+    key_value_store.values.pop(service._generation_cooldown_key(1), None)
 
     assert await service.can_generate(1) == (False, GENERATION_DAILY_LIMIT_MESSAGE)
 
 
 @pytest.mark.asyncio
 async def test_support_cooldown_limit() -> None:
-    redis = FakeRedis()
-    service = RateLimitService(redis)  # type: ignore[arg-type]
+    key_value_store = FakeKeyValueStore()
+    service = RateLimitService(key_value_store)  # type: ignore[arg-type]
 
     assert await service.can_contact_support(1) == (True, None)
 

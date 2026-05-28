@@ -1,4 +1,3 @@
-from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.bot.handlers.errors import build_user_error_message
@@ -34,7 +33,4 @@ def test_build_user_error_message_for_generation_errors() -> None:
 def test_build_user_error_message_for_infrastructure_errors() -> None:
     assert build_user_error_message(SQLAlchemyError("db")) == (
         "Не удалось сохранить данные. Попробуйте позже."
-    )
-    assert build_user_error_message(RedisError("redis")) == (
-        "Сервис временно недоступен. Попробуйте позже."
     )

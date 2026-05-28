@@ -6,8 +6,6 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.storage.redis import RedisStorage
-from redis.asyncio import Redis
 
 from app.bot.handlers import get_routers
 from app.bot.middlewares import DatabaseSessionMiddleware, IncomingLoggingMiddleware
@@ -37,13 +35,8 @@ async def main() -> None:
         raise SystemExit(str(exc)) from exc
 
     session_factory = create_session_factory(engine)
-    storage = create_storage(settings)
-    redis = get_storage_redis(storage)
-    if redis is None:
-        logger.warning("REDIS_URL is not set, using in-memory rate limits and support mapping")
-        key_value_store = InMemoryKeyValueStore()
-    else:
-        key_value_store = redis
+    storage = create_storage()
+    key_value_store = InMemoryKeyValueStore()
 
     bot = await create_bot(settings)
     dispatcher = Dispatcher(storage=storage)
@@ -72,30 +65,17 @@ async def main() -> None:
             settings=settings,
             generation_service=generation_service,
             rate_limit_service=rate_limit_service,
-            redis=key_value_store,
+            key_value_store=key_value_store,
         )
     finally:
         await wavespeed_client.close()
-        if redis is not None:
-            await redis.aclose()
         await bot.session.close()
         await engine.dispose()
 
 
-def create_storage(settings: Settings) -> MemoryStorage | RedisStorage:
-    if settings.redis_url:
-        logger.info("Using RedisStorage for FSM")
-        redis = Redis.from_url(settings.redis_url)
-        return RedisStorage(redis=redis)
-
+def create_storage() -> MemoryStorage:
     logger.info("Using MemoryStorage for FSM")
     return MemoryStorage()
-
-
-def get_storage_redis(storage: MemoryStorage | RedisStorage) -> Redis | None:
-    if isinstance(storage, RedisStorage):
-        return storage.redis
-    return None
 
 
 def build_bot(settings: Settings, proxy: str | None) -> Bot:

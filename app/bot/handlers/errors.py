@@ -3,7 +3,6 @@ import logging
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, ErrorEvent, Message, Update
-from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.services import (
@@ -83,9 +82,6 @@ def build_user_error_message(exception: Exception) -> str:
 
     if isinstance(exception, SQLAlchemyError):
         return "Не удалось сохранить данные. Попробуйте позже."
-
-    if isinstance(exception, RedisError):
-        return "Сервис временно недоступен. Попробуйте позже."
 
     if isinstance(exception, TelegramBadRequest):
         return "Telegram не смог обработать сообщение. Попробуйте позже."

@@ -26,7 +26,6 @@ class Settings(DatabaseSettings):
     bot_token: SecretStr
     wavespeed_api_key: SecretStr
 
-    redis_url: str | None = None
     telegram_proxy: str | None = None
     admin_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
     support_chat_id: int | None = None
@@ -39,17 +38,6 @@ class Settings(DatabaseSettings):
     wavespeed_request_timeout_seconds: float = 60.0
 
     log_level: str = "INFO"
-
-    @field_validator("redis_url", mode="before")
-    @classmethod
-    def parse_redis_url(cls, value: object) -> str | None:
-        if value is None:
-            return None
-
-        redis_url = str(value).strip()
-        if not redis_url:
-            return None
-        return redis_url
 
     @field_validator("admin_ids", mode="before")
     @classmethod

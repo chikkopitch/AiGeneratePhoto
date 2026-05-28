@@ -8,7 +8,7 @@ MVP Telegram-бота для генерации AI-фотосессий по т�
 - aiogram 3
 - SQLite или PostgreSQL через SQLAlchemy 2 async
 - Alembic оставлен в проекте; при запуске приложения схема создаётся через SQLAlchemy metadata
-- Redis для FSM и лимитов, опционально
+- In-memory хранилище для FSM, лимитов и связи с поддержкой
 - httpx
 - pydantic-settings
 - Docker Compose
@@ -67,7 +67,6 @@ Copy-Item .env.example .env
 - `BOT_TOKEN`
 - `WAVESPEED_API_KEY`
 - `DATABASE_URL`, можно оставить значением из `.env.example`
-- `REDIS_URL`, если нужен внешний Redis
 - `ADMIN_IDS`
 - `SUPPORT_CHAT_ID`, если нужен чат поддержки
 
@@ -75,7 +74,6 @@ Copy-Item .env.example .env
 
 ```env
 DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
-REDIS_URL=
 ```
 
 ### 2. Запустить проект
@@ -144,7 +142,6 @@ python -m app.main
 | `BOT_TOKEN` | токен Telegram-бота |
 | `WAVESPEED_API_KEY` | API-ключ WaveSpeed |
 | `DATABASE_URL` | опциональный URL базы данных; по умолчанию `sqlite+aiosqlite:///./data/app.db`; для PostgreSQL можно указать `postgresql://USER:PASSWORD@HOST:PORT/DB_NAME` |
-| `REDIS_URL` | опциональный URL Redis; пустое значение включает in-memory режим |
 | `TELEGRAM_PROXY` | опциональный proxy URL для Telegram API, например `socks5://HOST:PORT` |
 | `ADMIN_IDS` | Telegram ID администраторов через запятую |
 | `SUPPORT_CHAT_ID` | ID чата поддержки |
@@ -166,5 +163,4 @@ pytest
 - SQLAlchemy PostgreSQL dialect: https://docs.sqlalchemy.org/20/dialects/postgresql.html
 - aiosqlite: https://aiosqlite.omnilib.dev/
 - asyncpg: https://magicstack.github.io/asyncpg/current/
-- aiogram RedisStorage: https://docs.aiogram.dev/en/v3.15.0/dispatcher/finite_state_machine/storages.html
 - pydantic-settings `BaseSettings`: https://docs.pydantic.dev/latest/api/pydantic_settings/
