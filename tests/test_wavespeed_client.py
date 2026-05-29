@@ -139,7 +139,7 @@ async def test_upload_binary_file_returns_uploaded_url(
             json={
                 "code": 200,
                 "message": "success",
-                "data": {"url": "https://cdn.example/uploaded.png"},
+                "data": {"download_url": "https://cdn.example/uploaded.png"},
             },
         )
     )

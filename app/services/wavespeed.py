@@ -342,7 +342,7 @@ class WaveSpeedClient:
 
     def _extract_uploaded_url(self, payload: dict[str, Any]) -> str:
         data = self._extract_data(payload)
-        uploaded_url = data.get("url")
+        uploaded_url = data.get("download_url") or data.get("url")
         if not uploaded_url:
             raise WaveSpeedInvalidResponseError("WaveSpeed upload response does not contain file URL")
         return str(uploaded_url)
